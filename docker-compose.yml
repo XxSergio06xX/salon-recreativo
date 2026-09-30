@@ -1,0 +1,38 @@
+services:
+  db:
+    image: mariadb:10.11
+    container_name: arcade_db
+    env_file: .env
+    volumes:
+      - db_data:/var/lib/mysql
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      retries: 10
+    networks:
+      - arcade_net
+
+  web:
+    build: .
+    container_name: arcade_web
+    ports:
+      - "8080:80"
+    volumes:
+      - ./src:/var/www/html
+    environment:
+      DB_HOST: db
+      DB_NAME: ${MARIADB_DATABASE}
+      DB_USER: ${MARIADB_USER}
+      DB_PASS: ${MARIADB_PASSWORD}
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - arcade_net
+
+volumes:
+  db_data:
+
+networks:
+  arcade_net:
